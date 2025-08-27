@@ -17,9 +17,10 @@ interface Book {
 interface BookListProps {
   books: Book[];
   onBookClick: (bookId: string) => void;
+  onEditBookClick: (bookId: string) => void;
 }
 
-const BookList: React.FC<BookListProps> = ({ books, onBookClick }) => {
+const BookList: React.FC<BookListProps> = ({ books, onBookClick, onEditBookClick }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'status-completed';
@@ -54,6 +55,19 @@ const BookList: React.FC<BookListProps> = ({ books, onBookClick }) => {
           <div className="book-header">
             <h3 className="book-title">{book.title}</h3>
             {book.author && <p className="book-author">{book.author}</p>}
+
+            <div className="edit-book-button">
+              <button 
+                className="edit-book-button" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditBookClick(book.id);
+                }}
+              >
+                <span className="edit-book-icon">📝</span>
+                <span className="edit-book-text">Edit Book</span>
+              </button>
+            </div>
           </div>
           
           <div className="book-status">

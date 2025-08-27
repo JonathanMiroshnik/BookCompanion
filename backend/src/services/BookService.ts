@@ -12,6 +12,10 @@ export class BookService {
     `;
     
     const books = await this.db.all(query, [userId]);
+    if (!books) {
+      throw new Error('No books found');
+    }
+    
     return books.map(book => ({
       ...book,
       tags: JSON.parse(book.tags || '[]'),
@@ -21,7 +25,6 @@ export class BookService {
   }
 
   async createBook(bookData: CreateBookData, userId: string): Promise<Book> {
-    console.log('Creating book with service', bookData, userId);
     const query = `
       INSERT INTO books (
         id, user_id, title, author, description, page_count, 
@@ -31,28 +34,32 @@ export class BookService {
     
     const bookId = `book_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const tags = JSON.stringify(bookData.tags || []);
-    
-    const result = await this.db.run(query, [
-      bookId,
-      userId,
-      bookData.title,
-      bookData.author || null,
-      bookData.description || null,
-      bookData.pageCount || null,
-      bookData.genre || null,
-      tags,
-      bookData.readingStatus || 'not_started',
-      bookData.currentPage || 0,
-      bookData.rating || null,
-      bookData.notes || null
-    ]);
 
-    console.log('Book created', result);
+    try {
+      await this.db.run(query, [
+        bookId,
+        userId,
+        bookData.title,
+        bookData.author || null,
+        bookData.description || null,
+        bookData.pageCount || null,
+        bookData.genre || null,
+        tags,
+        bookData.readingStatus || 'not_started',
+        bookData.currentPage || 0,
+        bookData.rating || null,
+        bookData.notes || null
+      ]);
+    } catch (error) {
+      console.error('Error creating book:', error);
+      throw error;
+    }
 
     return this.getBookById(bookId, userId);
   }
 
   async getBookById(bookId: string, userId: string): Promise<Book> {
+    console.log('getBookById', bookId, userId);
     const query = `
       SELECT * FROM books 
       WHERE id = ? AND user_id = ?
@@ -84,15 +91,48 @@ export class BookService {
       fields.push('author = ?');
       values.push(updateData.author);
     }
+    if (updateData.isbn !== undefined) {
+      fields.push('isbn = ?');
+      values.push(updateData.isbn);
+    }
+    if (updateData.description !== undefined) {
+      fields.push('description = ?');
+      values.push(updateData.description);
+    }
+    if (updateData.pageCount !== undefined) {
+      fields.push('page_count = ?');
+      values.push(updateData.pageCount);
+    }
+    if (updateData.genre !== undefined) {
+      fields.push('genre = ?');
+      values.push(updateData.genre);
+    }
     if (updateData.tags !== undefined) {
       fields.push('tags = ?');
       values.push(JSON.stringify(updateData.tags));
     }
-    // Add more fields as needed...
+    if (updateData.readingStatus !== undefined) {
+      fields.push('reading_status = ?');
+      values.push(updateData.readingStatus);
+    }
+    if (updateData.currentPage !== undefined) {
+      fields.push('current_page = ?');
+      values.push(updateData.currentPage);
+    }
+    if (updateData.rating !== undefined) {
+      fields.push('rating = ?');
+      values.push(updateData.rating);
+    }
+    if (updateData.notes !== undefined) {
+      fields.push('notes = ?');
+      values.push(updateData.notes);
+    }
     
     if (fields.length === 0) {
       throw new Error('No fields to update');
     }
+
+    console.log('fields', fields);
 
     fields.push('updated_at = CURRENT_TIMESTAMP');
     

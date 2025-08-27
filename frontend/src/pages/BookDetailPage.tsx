@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import NoteList from '../components/NoteList';
 import NoteForm from '../components/NoteForm';
 import AIChatBox from '../components/AIChatBox';
-import { bookApi } from '../services/api';
+import { ApiResponse, bookApi, noteApi } from '../services/api';
 import './BookDetailPage.css';
 
 // Types
@@ -23,7 +23,8 @@ interface Book {
 }
 
 interface Note {
-  id: string;
+  id?: string;
+  bookId: string;
   title?: string;
   content: string;
   pageReference?: number;
@@ -52,7 +53,7 @@ const BookDetailPage: React.FC = () => {
       setError(null);
 
       // Fetch book details
-      const bookResponse = await bookApi.getBookById(id!);
+      const bookResponse: ApiResponse<Book[]> = await bookApi.getBookById(id!);
       if (bookResponse.success && bookResponse.data) {
         console.log('Book data:', bookResponse.data);
         const bookData = Array.isArray(bookResponse.data) ? bookResponse.data[0] : bookResponse.data;
@@ -67,7 +68,8 @@ const BookDetailPage: React.FC = () => {
       }
 
       // Fetch book notes
-      const notesResponse = await bookApi.getBookNotes(id!);
+      const userId = '123';
+      const notesResponse: ApiResponse<Note[]> = await bookApi.getBookNotes(id!, userId);
       if (notesResponse.success && notesResponse.data) {
         const notesWithDates = notesResponse.data.map(note => ({
           ...note,
@@ -86,20 +88,24 @@ const BookDetailPage: React.FC = () => {
     }
   };
 
-  const handleAddNote = async (noteData: Omit<Note, 'id' | 'createdAt'>) => {
+  const handleAddNote = async (noteData: Omit<Note, 'bookId' | 'createdAt' | 'id'>) => {
+    const userId = '123';
     try {
-      // TODO: Implement add note API call
-      // For now, simulate adding a note
-      const newNote: Note = {
-        id: Date.now().toString(),
-        ...noteData,
-        createdAt: new Date()
-      };
+      // Send to backend and get back the complete note with ID
+      const response = await noteApi.createNote(id!, noteData, userId);
       
-      setNotes(prev => [newNote, ...prev]);
-      setShowAddNote(false);
-      
-      console.log('Note added successfully (simulated)');
+      if (response.success && response.data) {
+        // Add the returned note (with ID) to local state
+        const newNote = {
+          ...response.data,
+          createdAt: new Date(response.data.createdAt)
+        };
+        setNotes(prev => [newNote, ...prev]);
+        setShowAddNote(false);
+        console.log('Note added successfully:', newNote);
+      } else {
+        throw new Error(response.error || 'Failed to create note');
+      }
     } catch (error) {
       console.error('Failed to add note:', error);
       setError('Failed to add note');

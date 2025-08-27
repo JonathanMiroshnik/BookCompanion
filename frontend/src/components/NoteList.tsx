@@ -1,15 +1,6 @@
 import React from 'react';
 import './NoteList.css';
-
-// Types
-interface Note {
-  id: string;
-  title?: string;
-  content: string;
-  pageReference?: number;
-  tags: string[];
-  createdAt: Date;
-}
+import { Note } from '../services/api';
 
 interface NoteListProps {
   notes: Note[];
@@ -32,15 +23,17 @@ const NoteList: React.FC<NoteListProps> = ({ notes, onNoteClick }) => {
     <div className="note-list">
       {notes.map(note => (
         <div 
-          key={note.id} 
-          className="note-card"
-          onClick={() => onNoteClick(note.id)}
+          key={note.id || `temp-${Math.random()}`} 
+          className={`note-card ${!note.id ? 'note-pending' : ''}`}
+          onClick={() => note.id ? onNoteClick(note.id) : undefined}
+          style={{ cursor: note.id ? 'pointer' : 'default' }}
         >
           <div className="note-header">
             {note.title && <h4 className="note-title">{note.title}</h4>}
             {note.pageReference && (
               <span className="page-reference">Page {note.pageReference}</span>
             )}
+            {!note.id && <span className="pending-indicator">⏳ Saving...</span>}
           </div>
           
           <div className="note-content">

@@ -11,7 +11,7 @@ import { createAIRoutes } from './routes/aiRoutes';
 
 // Import database initialization
 import { initializeSQLite } from './db/sqlite';
-// import { initializeVectorStore } from './db/vectorStore';
+import { initializeVectorStore } from './db/vectorStore';
 
 const app = express();
 const PORT = process.env.PORT || 5000;

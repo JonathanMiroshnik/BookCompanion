@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { NoteService } from '../services/NoteService';
+import { CreateNoteData } from '../types/Note';
 
 export class NoteController {
   private noteService: NoteService;
@@ -13,15 +14,16 @@ export class NoteController {
    */
   async getNotesByBook(req: Request, res: Response): Promise<void> {
     try {
-      const { bookId } = req.params;
-      const userId = (req as any).user.id;
-      
-      // TODO: Implement get notes by book
-      // - Validate book ownership
-      // - Call NoteService.getNotesByBook(bookId, userId)
-      // - Return paginated list of notes
-      
-      res.status(501).json({ message: 'Get notes by book not implemented yet', bookId });
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      const notes = await this.noteService.getNotesByBook(id, userId);
+    
+      res.status(200).json({
+        success: true,
+        data: notes,
+        total: notes.length,
+        message: 'Notes retrieved successfully'
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to get notes' });
     }
@@ -33,14 +35,22 @@ export class NoteController {
   async getNoteById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = (req as any).user.id;
+      // var userId = (req as any).user.id; // From auth middleware
       
-      // TODO: Implement get note by ID
-      // - Validate note ownership
-      // - Call NoteService.getNoteById(noteId, userId)
-      // - Return note details
+      // TODO: Implement get book by ID
+      // - Validate book ownership
+      // - Call BookService.getBookById(bookId, userId)
+      // - Return book details
+
+      const userId = '123';
+      const note = await this.noteService.getNoteById(id, userId);
+      console.log('note', note);
       
-      res.status(501).json({ message: 'Get note by ID not implemented yet', noteId: id });
+      res.status(200).json({
+        success: true,
+        data: note,
+        message: 'Note retrieved successfully'
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to get note' });
     }
@@ -51,16 +61,21 @@ export class NoteController {
    */
   async createNote(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
-      const noteData = req.body;
+      const { id } = req.params;
+      const userId = req.body.userId;
+      const noteData: CreateNoteData = req.body.note;
       
       // TODO: Implement create note
       // - Validate note data (content, bookId, etc.)
-      // - Validate book ownership
-      // - Call NoteService.createNote(noteData, userId)
-      // - Return created note with ID
+
+      const note = await this.noteService.createNote(noteData, id, userId);
+      console.log('Note created', note);  
       
-      res.status(501).json({ message: 'Create note not implemented yet', noteData });
+      res.status(201).json({
+        success: true,
+        data: note,
+        message: 'Note created successfully'
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to create note' });
     }

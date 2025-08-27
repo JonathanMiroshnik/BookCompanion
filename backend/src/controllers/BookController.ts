@@ -13,12 +13,15 @@ export class BookController {
    */
   async getAllBooks(req: Request, res: Response): Promise<void> {
     try {
-      // TODO: Implement get all books
-      // - Extract user ID from JWT token
-      // - Call BookService.getAllBooks(userId)
-      // - Return paginated list of books
+      const userId = req.query.userId as string;
+      const books = await this.bookService.getAllBooks(userId);
       
-      res.status(501).json({ message: 'Get all books not implemented yet' });
+      res.status(200).json({
+        success: true,
+        data: books,
+        total: books.length,
+        message: 'Books retrieved successfully'
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to get books' });
     }
@@ -28,16 +31,24 @@ export class BookController {
    * Gets a specific book by ID
    */
   async getBookById(req: Request, res: Response): Promise<void> {
+    console.log('getBookById', req.params);
     try {
       const { id } = req.params;
-      const userId = (req as any).user.id; // From auth middleware
-      
+      // var userId = (req as any).user.id; // From auth middleware
+
       // TODO: Implement get book by ID
       // - Validate book ownership
       // - Call BookService.getBookById(bookId, userId)
       // - Return book details
+
+      const userId = '123';
+      const book = await this.bookService.getBookById(id, userId);
       
-      res.status(501).json({ message: 'Get book by ID not implemented yet', bookId: id });
+      res.status(200).json({
+        success: true,
+        data: book,
+        message: 'Book retrieved successfully'
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to get book' });
     }
@@ -47,12 +58,9 @@ export class BookController {
    * Creates a new book
    */
   async createBook(req: Request, res: Response): Promise<void> {
-    console.log('Creating book', req.body);
     try {
-      console.log('before');
-      const userId = (req as any).user.id;
-      console.log('after');
-      const bookData = req.body;
+      const userId = req.body.userId;
+      const bookData = req.body.book;
       
       // TODO: Implement create book
       // - Validate book data (title, author, etc.)
@@ -60,7 +68,11 @@ export class BookController {
       const book = await this.bookService.createBook(bookData, userId);
       console.log('Book created', book);  
       
-      res.status(201).json(book);
+      res.status(201).json({
+        success: true,
+        data: book,
+        message: 'Book created successfully'
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to create book' });
     }
@@ -72,15 +84,21 @@ export class BookController {
   async updateBook(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = (req as any).user.id;
-      const updateData = req.body;
+      const userId = req.body.userId;
+      const updateData = req.body.book;
+      
+      const book = await this.bookService.updateBook(id, updateData, userId);
+      
+      res.status(200).json({
+        success: true,
+        data: book,
+        message: 'Book updated successfully'
+      });
       
       // TODO: Implement update book
       // - Validate book ownership
       // - Call BookService.updateBook(bookId, updateData, userId)
       // - Return updated book
-      
-      res.status(501).json({ message: 'Update book not implemented yet', bookId: id, updateData });
     } catch (error) {
       res.status(500).json({ error: 'Failed to update book' });
     }

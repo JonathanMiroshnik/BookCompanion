@@ -10,8 +10,6 @@ function createNoteRoutes() {
     // Apply authentication middleware to all note routes
     router.use(authMiddleware_1.authMiddleware);
     // Note CRUD routes
-    router.get('/book/:bookId', noteController.getNotesByBook.bind(noteController));
-    router.post('/book/:bookId', noteController.createNote.bind(noteController));
     router.get('/:id', noteController.getNoteById.bind(noteController));
     router.put('/:id', noteController.updateNote.bind(noteController));
     router.delete('/:id', noteController.deleteNote.bind(noteController));

@@ -15,14 +15,11 @@ export class AIController {
   async processQuery(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user.id;
-      const { query, bookIds, includeGeneralKnowledge } = req.body;
+      const { query, bookId } = req.body;
       
-      // TODO: Implement AI query processing
-      // - Validate query parameters
-      // - Call AIService.processQuery(query, bookIds, userId)
-      // - Return RAG-generated response with sources
+      const response = await this.aiService.processQuery(query, bookId, userId);
       
-      res.status(501).json({ message: 'AI query processing not implemented yet', query, bookIds });
+      res.status(200).json({ success: true, data: response });
     } catch (error) {
       res.status(500).json({ error: 'Failed to process AI query' });
     }

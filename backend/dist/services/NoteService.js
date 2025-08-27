@@ -10,17 +10,39 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NoteService = void 0;
+const sqlite_1 = require("../db/sqlite");
 class NoteService {
+    constructor() {
+        this.db = (0, sqlite_1.getDatabase)();
+    }
     /**
      * Gets all notes for a specific book
      */
     getNotesByBook(bookId_1, userId_1) {
         return __awaiter(this, arguments, void 0, function* (bookId, userId, page = 1, limit = 50) {
-            // TODO: Implement get notes by book
-            // - Query database for book's notes
-            // - Apply pagination
-            // - Return notes with metadata
-            throw new Error('Get notes by book not implemented yet');
+            const offset = (page - 1) * limit;
+            // Get paginated notes
+            const query = `
+      SELECT * FROM notes 
+      WHERE book_id = ? AND user_id = ? 
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+            const notes = yield this.db.all(query, [bookId, userId, limit, offset]);
+            if (!notes) {
+                return [];
+            }
+            return notes.map(note => ({
+                id: note.id,
+                bookId: note.book_id,
+                userId: note.user_id,
+                title: note.title || undefined,
+                content: note.content,
+                pageReference: note.page_reference || undefined,
+                tags: JSON.parse(note.tags || '[]'),
+                createdAt: new Date(note.created_at),
+                updatedAt: new Date(note.updated_at)
+            }));
         });
     }
     /**
@@ -28,24 +50,61 @@ class NoteService {
      */
     getNoteById(noteId, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // TODO: Implement get note by ID
-            // - Query database for note
-            // - Validate ownership
-            // - Return note details
-            throw new Error('Get note by ID not implemented yet');
+            const query = `
+      SELECT * FROM notes 
+      WHERE id = ? AND user_id = ?
+    `;
+            const note = yield this.db.get(query, [noteId, userId]);
+            if (!note) {
+                throw new Error('Note not found');
+            }
+            return Object.assign(Object.assign({}, note), { tags: JSON.parse(note.tags || '[]'), createdAt: new Date(note.created_at), updatedAt: new Date(note.updated_at) });
+        });
+    }
+    /**
+     * Gets a specific note from a book (with book validation)
+     */
+    getBookNote(bookId, noteId, userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `
+      SELECT * FROM notes 
+      WHERE id = ? AND book_id = ? AND user_id = ?
+    `;
+            const note = yield this.db.get(query, [noteId, bookId, userId]);
+            if (!note) {
+                throw new Error('Note not found or does not belong to the specified book');
+            }
+            return Object.assign(Object.assign({}, note), { tags: JSON.parse(note.tags || '[]'), createdAt: new Date(note.created_at), updatedAt: new Date(note.updated_at) });
         });
     }
     /**
      * Creates a new note
      */
-    createNote(noteData, userId) {
+    createNote(noteData, bookId, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // TODO: Implement create note
-            // - Validate note data
-            // - Validate book ownership
-            // - Insert into database
-            // - Return created note with ID
-            throw new Error('Create note not implemented yet');
+            const query = `
+      INSERT INTO notes (
+        id, book_id, user_id, title, content, page_reference, tags
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+            const noteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const tags = JSON.stringify(noteData.tags || []);
+            try {
+                yield this.db.run(query, [
+                    noteId,
+                    bookId,
+                    userId,
+                    noteData.title || null,
+                    noteData.content,
+                    noteData.pageReference || null,
+                    tags
+                ]);
+            }
+            catch (error) {
+                console.error('Error creating note:', error);
+                throw error;
+            }
+            return this.getNoteById(noteId, userId);
         });
     }
     /**
@@ -53,11 +112,54 @@ class NoteService {
      */
     updateNote(noteId, updateData, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // TODO: Implement update note
-            // - Validate ownership
-            // - Update database record
-            // - Return updated note
-            throw new Error('Update note not implemented yet');
+            // Build dynamic update query
+            const fields = [];
+            const values = [];
+            if (updateData.title !== undefined) {
+                fields.push('title = ?');
+                values.push(updateData.title);
+            }
+            if (updateData.content !== undefined) {
+                fields.push('content = ?');
+                values.push(updateData.content);
+            }
+            if (updateData.pageReference !== undefined) {
+                fields.push('page_reference = ?');
+                values.push(updateData.pageReference);
+            }
+            if (updateData.tags !== undefined) {
+                fields.push('tags = ?');
+                values.push(JSON.stringify(updateData.tags));
+            }
+            if (fields.length === 0) {
+                throw new Error('No fields to update');
+            }
+            fields.push('updated_at = CURRENT_TIMESTAMP');
+            const query = `
+      UPDATE notes 
+      SET ${fields.join(', ')} 
+      WHERE id = ? AND user_id = ?
+    `;
+            values.push(noteId, userId);
+            const result = yield this.db.run(query, values);
+            if (result.changes === 0) {
+                throw new Error('Note not found or no changes made');
+            }
+            return this.getNoteById(noteId, userId);
+        });
+    }
+    /**
+     * Updates a note from a specific book (with book validation)
+     */
+    updateBookNote(bookId, noteId, updateData, userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Validate that the note belongs to the specified book
+            const noteQuery = `SELECT id FROM notes WHERE id = ? AND book_id = ? AND user_id = ?`;
+            const note = yield this.db.get(noteQuery, [noteId, bookId, userId]);
+            if (!note) {
+                throw new Error('Note not found or does not belong to the specified book');
+            }
+            return this.updateNote(noteId, updateData, userId);
         });
     }
     /**
@@ -65,11 +167,24 @@ class NoteService {
      */
     deleteNote(noteId, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // TODO: Implement delete note
-            // - Validate ownership
-            // - Delete note record
-            // - Clean up any associated data
-            throw new Error('Delete note not implemented yet');
+            const result = yield this.db.run('DELETE FROM notes WHERE id = ? AND user_id = ?', [noteId, userId]);
+            if (result.changes === 0) {
+                throw new Error('Note not found');
+            }
+        });
+    }
+    /**
+     * Deletes a note from a specific book (with book validation)
+     */
+    deleteBookNote(bookId, noteId, userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Validate that the note belongs to the specified book
+            const noteQuery = `SELECT id FROM notes WHERE id = ? AND book_id = ? AND user_id = ?`;
+            const note = yield this.db.get(noteQuery, [noteId, bookId, userId]);
+            if (!note) {
+                throw new Error('Note not found or does not belong to the specified book');
+            }
+            yield this.deleteNote(noteId, userId);
         });
     }
     /**
@@ -77,11 +192,35 @@ class NoteService {
      */
     searchNotes(searchParams, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // TODO: Implement note search
-            // - Build search query across all user's notes
-            // - Apply filters (content, tags, date range, book)
-            // - Return ranked results
-            throw new Error('Note search not implemented yet');
+            const { query, tags, bookId, pageFrom, pageTo } = searchParams;
+            let sqlQuery = `
+      SELECT n.* FROM notes n
+      JOIN books b ON n.book_id = b.id
+      WHERE n.user_id = ?
+    `;
+            const values = [userId];
+            if (query) {
+                sqlQuery += ` AND (n.title LIKE ? OR n.content LIKE ?)`;
+                values.push(`%${query}%`, `%${query}%`);
+            }
+            if (bookId) {
+                sqlQuery += ` AND n.book_id = ?`;
+                values.push(bookId);
+            }
+            if (pageFrom !== undefined) {
+                sqlQuery += ` AND n.page_reference >= ?`;
+                values.push(pageFrom);
+            }
+            if (pageTo !== undefined) {
+                sqlQuery += ` AND n.page_reference <= ?`;
+                values.push(pageTo);
+            }
+            sqlQuery += ` ORDER BY n.created_at DESC`;
+            const notes = yield this.db.all(sqlQuery, values);
+            if (!notes) {
+                return [];
+            }
+            return notes.map(note => (Object.assign(Object.assign({}, note), { tags: JSON.parse(note.tags || '[]'), createdAt: new Date(note.created_at), updatedAt: new Date(note.updated_at) })));
         });
     }
     /**
@@ -89,11 +228,18 @@ class NoteService {
      */
     getNoteTags(userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // TODO: Implement get note tags
-            // - Query database for unique tags
-            // - Count usage for each tag
-            // - Return sorted by frequency
-            throw new Error('Get note tags not implemented yet');
+            const query = `
+      SELECT 
+        json_extract(tag.value, '$') as tag,
+        COUNT(*) as count
+      FROM notes n,
+           json_each(n.tags) as tag
+      WHERE n.user_id = ?
+      GROUP BY tag
+      ORDER BY count DESC
+    `;
+            const tags = yield this.db.all(query, [userId]);
+            return tags || [];
         });
     }
     /**
@@ -101,10 +247,16 @@ class NoteService {
      */
     getNotesByTag(tag, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // TODO: Implement get notes by tag
-            // - Query database for notes with specific tag
-            // - Return filtered notes
-            throw new Error('Get notes by tag not implemented yet');
+            const query = `
+      SELECT * FROM notes 
+      WHERE user_id = ? AND json_extract(tags, '$') LIKE ?
+      ORDER BY created_at DESC
+    `;
+            const notes = yield this.db.all(query, [userId, `%${tag}%`]);
+            if (!notes) {
+                return [];
+            }
+            return notes.map(note => (Object.assign(Object.assign({}, note), { tags: JSON.parse(note.tags || '[]'), createdAt: new Date(note.created_at), updatedAt: new Date(note.updated_at) })));
         });
     }
     /**
@@ -112,11 +264,10 @@ class NoteService {
      */
     addTagsToNote(noteId, tags, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // TODO: Implement add tags to note
-            // - Validate ownership
-            // - Add new tags to note
-            // - Update database
-            throw new Error('Add tags to note not implemented yet');
+            const note = yield this.getNoteById(noteId, userId);
+            const existingTags = note.tags || [];
+            const newTags = [...new Set([...existingTags, ...tags])];
+            yield this.updateNote(noteId, { tags: newTags }, userId);
         });
     }
     /**
@@ -124,11 +275,10 @@ class NoteService {
      */
     removeTagsFromNote(noteId, tags, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // TODO: Implement remove tags from note
-            // - Validate ownership
-            // - Remove specified tags from note
-            // - Update database
-            throw new Error('Remove tags from note not implemented yet');
+            const note = yield this.getNoteById(noteId, userId);
+            const existingTags = note.tags || [];
+            const newTags = existingTags.filter(tag => !tags.includes(tag));
+            yield this.updateNote(noteId, { tags: newTags }, userId);
         });
     }
 }

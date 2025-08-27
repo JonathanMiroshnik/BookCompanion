@@ -23,6 +23,9 @@ class BookService {
       ORDER BY created_at DESC
     `;
             const books = yield this.db.all(query, [userId]);
+            if (!books) {
+                throw new Error('No books found');
+            }
             return books.map(book => (Object.assign(Object.assign({}, book), { tags: JSON.parse(book.tags || '[]'), createdAt: new Date(book.created_at), updatedAt: new Date(book.updated_at) })));
         });
     }
@@ -36,25 +39,32 @@ class BookService {
     `;
             const bookId = `book_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const tags = JSON.stringify(bookData.tags || []);
-            yield this.db.run(query, [
-                bookId,
-                userId,
-                bookData.title,
-                bookData.author || null,
-                bookData.description || null,
-                bookData.pageCount || null,
-                bookData.genre || null,
-                tags,
-                bookData.readingStatus || 'not_started',
-                bookData.currentPage || 0,
-                bookData.rating || null,
-                bookData.notes || null
-            ]);
+            try {
+                yield this.db.run(query, [
+                    bookId,
+                    userId,
+                    bookData.title,
+                    bookData.author || null,
+                    bookData.description || null,
+                    bookData.pageCount || null,
+                    bookData.genre || null,
+                    tags,
+                    bookData.readingStatus || 'not_started',
+                    bookData.currentPage || 0,
+                    bookData.rating || null,
+                    bookData.notes || null
+                ]);
+            }
+            catch (error) {
+                console.error('Error creating book:', error);
+                throw error;
+            }
             return this.getBookById(bookId, userId);
         });
     }
     getBookById(bookId, userId) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log('getBookById', bookId, userId);
             const query = `
       SELECT * FROM books 
       WHERE id = ? AND user_id = ?
@@ -79,14 +89,46 @@ class BookService {
                 fields.push('author = ?');
                 values.push(updateData.author);
             }
+            if (updateData.isbn !== undefined) {
+                fields.push('isbn = ?');
+                values.push(updateData.isbn);
+            }
+            if (updateData.description !== undefined) {
+                fields.push('description = ?');
+                values.push(updateData.description);
+            }
+            if (updateData.pageCount !== undefined) {
+                fields.push('page_count = ?');
+                values.push(updateData.pageCount);
+            }
+            if (updateData.genre !== undefined) {
+                fields.push('genre = ?');
+                values.push(updateData.genre);
+            }
             if (updateData.tags !== undefined) {
                 fields.push('tags = ?');
                 values.push(JSON.stringify(updateData.tags));
             }
-            // Add more fields as needed...
+            if (updateData.readingStatus !== undefined) {
+                fields.push('reading_status = ?');
+                values.push(updateData.readingStatus);
+            }
+            if (updateData.currentPage !== undefined) {
+                fields.push('current_page = ?');
+                values.push(updateData.currentPage);
+            }
+            if (updateData.rating !== undefined) {
+                fields.push('rating = ?');
+                values.push(updateData.rating);
+            }
+            if (updateData.notes !== undefined) {
+                fields.push('notes = ?');
+                values.push(updateData.notes);
+            }
             if (fields.length === 0) {
                 throw new Error('No fields to update');
             }
+            console.log('fields', fields);
             fields.push('updated_at = CURRENT_TIMESTAMP');
             const query = `
       UPDATE books 

@@ -23,7 +23,6 @@ const noteRoutes_1 = require("./routes/noteRoutes");
 const aiRoutes_1 = require("./routes/aiRoutes");
 // Import database initialization
 const sqlite_1 = require("./db/sqlite");
-// import { initializeVectorStore } from './db/vectorStore';
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
 // Middleware
@@ -220,14 +219,27 @@ function startServer() {
             const aiRoutes = (0, aiRoutes_1.createAIRoutes)();
             // Register routes
             app.use('/api/auth', authRoutes);
-            // app.use('/api/books', bookRoutes);
-            app.use('/api/books', (req, res, next) => {
-                console.log('📚 Book route called:', req.method, req.path);
-                next();
-            });
-            // app.use('/api/notes', noteRoutes);
-            // app.use('/api/ai', aiRoutes);
+            app.use('/api/books', bookRoutes);
+            app.use('/api/notes', noteRoutes);
+            app.use('/api/ai', aiRoutes);
             console.log('✅ API routes created and registered successfully');
+            // Error handling middleware
+            app.use((err, req, res, next) => {
+                console.error('Error:', err.stack);
+                res.status(500).json({
+                    success: false,
+                    error: 'Something went wrong!',
+                    message: err.message
+                });
+            });
+            // 404 handler
+            app.use('*', (req, res) => {
+                res.status(404).json({
+                    success: false,
+                    error: 'Route not found',
+                    message: `The route ${req.originalUrl} does not exist`
+                });
+            });
             // Start Express server
             app.listen(PORT, () => {
                 console.log(`🚀 Server running on http://localhost:${PORT}`);
@@ -246,26 +258,6 @@ function startServer() {
         }
     });
 }
-startServer().catch(error => {
-    console.error('❌ Failed to initialize server:', error);
-    process.exit(1);
-});
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Error:', err.stack);
-    res.status(500).json({
-        success: false,
-        error: 'Something went wrong!',
-        message: err.message
-    });
-});
-// 404 handler
-app.use('*', (req, res) => {
-    res.status(404).json({
-        success: false,
-        error: 'Route not found',
-        message: `The route ${req.originalUrl} does not exist`
-    });
-});
+startServer();
 exports.default = app;
 //# sourceMappingURL=server.js.map

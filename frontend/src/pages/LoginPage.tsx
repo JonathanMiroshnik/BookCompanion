@@ -1,22 +1,30 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import './LoginPage.css';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleGoogleLogin = async () => {
     try {
       // TODO: Implement Google OAuth login
-      // - Redirect to backend /api/auth/google endpoint
-      // - Handle OAuth flow
-      // - Store authentication token
-      // - Redirect to dashboard
+      // After successful login, you'll get user data
       
-      console.log('Google login not implemented yet');
+      // Placeholder: simulate successful login with user data
+      const userData = {
+        id: '123', // This will come from your backend after OAuth
+        email: 'user@example.com',
+        name: 'Test User',
+        picture_url: 'https://example.com/avatar.jpg'
+      };
       
-      // Placeholder: simulate successful login
-      // navigate('/dashboard');
+      // Save user data to context and localStorage
+      login(userData);
+      
+      // Redirect to dashboard
+      navigate('/dashboard');
     } catch (error) {
       console.error('Login failed:', error);
     }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import BookList from '../components/BookList';
 import BookForm from '../components/BookForm';
 import { bookApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import './DashboardPage.css';
 
 // Types
@@ -36,22 +37,31 @@ interface BookFormData {
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [books, setBooks] = useState<Book[]>([]);
-  const [showAddBook, setShowAddBook] = useState(false);
+
+  const [showBookForm, setShowBookForm] = useState(false);
+  const [bookToEdit, setBookToEdit] = useState<Book | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchBooks();
   }, []);
 
   const fetchBooks = async () => {
+    const userId = user?.id || '123';
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await bookApi.getAllBooks();
-      
+
+      console.log('fetching books');
+      const response = await bookApi.getAllBooks(userId);
+      console.log('response', response);
+
       if (response.success && response.data) {
+        console.log('response.data', response.data);
+
         // Convert date strings back to Date objects
         const booksWithDates = response.data.map(book => ({
           ...book,
@@ -70,15 +80,53 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleAddBook = async (bookData: BookFormData) => {
+  const handleShowBookForm = async (bookData: BookFormData) => {
+    const userId = user?.id || '123';
+
     try {
+      if (bookToEdit) {
+        try {
+          const response = await bookApi.updateBook(bookToEdit.id, {
+            title: bookData.title,
+            author: bookData.author,
+            pageCount: bookData.pageCount,
+            genre: bookData.genre,
+            tags: bookData.tags
+          }, userId);
+  
+          if (response.success && response.data) {
+            // Add the new book to the list
+            const updatedBook = {
+              ...response.data,
+              createdAt: new Date(response.data.createdAt),
+              updatedAt: new Date(response.data.updatedAt)
+            };
+            setBooks(prev => prev.map(book => 
+              book.id === bookToEdit.id ? updatedBook : book
+            ));
+            setShowBookForm(false);
+            setBookToEdit(null);
+            
+            // Show success message (you could add a toast notification here)
+            console.log('Book updated successfully:', response.message);
+          } else {
+            setError(response.error || 'Failed to update book');
+          }
+        } catch (error) {
+          console.error('Failed to update book:', error);
+          setError('Failed to connect to the server');
+        }
+
+        return;
+      }
+
       const response = await bookApi.createBook({
         title: bookData.title,
         author: bookData.author,
         pageCount: bookData.pageCount,
         genre: bookData.genre,
         tags: bookData.tags
-      });
+      }, userId);
 
       if (response.success && response.data) {
         // Add the new book to the list
@@ -88,7 +136,7 @@ const DashboardPage: React.FC = () => {
           updatedAt: new Date(response.data.updatedAt)
         };
         setBooks(prev => [newBook, ...prev]);
-        setShowAddBook(false);
+        setShowBookForm(false);
         
         // Show success message (you could add a toast notification here)
         console.log('Book added successfully:', response.message);
@@ -103,6 +151,12 @@ const DashboardPage: React.FC = () => {
 
   const handleBookClick = (bookId: string) => {
     navigate(`/books/${bookId}`);
+  };
+
+  const handleEditBookClick = (bookId: string) => {
+    console.log('Edit book clicked:', bookId);
+    setBookToEdit(books.find(book => book.id === bookId) || null);
+    setShowBookForm(true);
   };
 
   const handleLogout = () => {
@@ -137,7 +191,10 @@ const DashboardPage: React.FC = () => {
           <div className="header-actions">
             <button 
               className="add-book-btn"
-              onClick={() => setShowAddBook(true)}
+              onClick={() => {
+                setShowBookForm(true);
+                setBookToEdit(null);
+              }}
             >
               + Add Book
             </button>
@@ -163,10 +220,11 @@ const DashboardPage: React.FC = () => {
           </div>
         </main>
 
-        {showAddBook && (
+        {showBookForm && (
           <BookForm
-            onSubmit={handleAddBook}
-            onCancel={() => setShowAddBook(false)}
+            onSubmit={handleShowBookForm}
+            onCancel={() => setShowBookForm(false)}
+            initialData={bookToEdit || undefined}
           />
         )}
       </div>
@@ -180,7 +238,7 @@ const DashboardPage: React.FC = () => {
         <div className="header-actions">
           <button 
             className="add-book-btn"
-            onClick={() => setShowAddBook(true)}
+            onClick={() => setShowBookForm(true)}
           >
             + Add Book
           </button>
@@ -200,7 +258,7 @@ const DashboardPage: React.FC = () => {
             <p>Start building your reading library by adding your first book!</p>
             <button 
               className="add-first-book-btn"
-              onClick={() => setShowAddBook(true)}
+              onClick={() => setShowBookForm(true)}
             >
               Add Your First Book
             </button>
@@ -209,14 +267,16 @@ const DashboardPage: React.FC = () => {
           <BookList 
             books={books}
             onBookClick={handleBookClick}
+            onEditBookClick={handleEditBookClick}
           />
         )}
       </main>
 
-      {showAddBook && (
+      {showBookForm && (
         <BookForm
-          onSubmit={handleAddBook}
-          onCancel={() => setShowAddBook(false)}
+          onSubmit={handleShowBookForm}
+          onCancel={() => setShowBookForm(false)}
+          initialData={bookToEdit || undefined}
         />
       )}
     </div>

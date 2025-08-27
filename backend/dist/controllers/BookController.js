@@ -21,11 +21,14 @@ class BookController {
     getAllBooks(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                // TODO: Implement get all books
-                // - Extract user ID from JWT token
-                // - Call BookService.getAllBooks(userId)
-                // - Return paginated list of books
-                res.status(501).json({ message: 'Get all books not implemented yet' });
+                const userId = req.query.userId;
+                const books = yield this.bookService.getAllBooks(userId);
+                res.status(200).json({
+                    success: true,
+                    data: books,
+                    total: books.length,
+                    message: 'Books retrieved successfully'
+                });
             }
             catch (error) {
                 res.status(500).json({ error: 'Failed to get books' });
@@ -37,14 +40,21 @@ class BookController {
      */
     getBookById(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log('getBookById', req.params);
             try {
                 const { id } = req.params;
-                const userId = req.user.id; // From auth middleware
+                // var userId = (req as any).user.id; // From auth middleware
                 // TODO: Implement get book by ID
                 // - Validate book ownership
                 // - Call BookService.getBookById(bookId, userId)
                 // - Return book details
-                res.status(501).json({ message: 'Get book by ID not implemented yet', bookId: id });
+                const userId = '123';
+                const book = yield this.bookService.getBookById(id, userId);
+                res.status(200).json({
+                    success: true,
+                    data: book,
+                    message: 'Book retrieved successfully'
+                });
             }
             catch (error) {
                 res.status(500).json({ error: 'Failed to get book' });
@@ -56,14 +66,18 @@ class BookController {
      */
     createBook(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('Creating book');
             try {
-                const userId = req.user.id;
-                const bookData = req.body;
+                const userId = req.body.userId;
+                const bookData = req.body.book;
                 // TODO: Implement create book
                 // - Validate book data (title, author, etc.)
                 const book = yield this.bookService.createBook(bookData, userId);
-                res.status(201).json(book);
+                console.log('Book created', book);
+                res.status(201).json({
+                    success: true,
+                    data: book,
+                    message: 'Book created successfully'
+                });
             }
             catch (error) {
                 res.status(500).json({ error: 'Failed to create book' });
@@ -77,13 +91,18 @@ class BookController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { id } = req.params;
-                const userId = req.user.id;
-                const updateData = req.body;
+                const userId = req.body.userId;
+                const updateData = req.body.book;
+                const book = yield this.bookService.updateBook(id, updateData, userId);
+                res.status(200).json({
+                    success: true,
+                    data: book,
+                    message: 'Book updated successfully'
+                });
                 // TODO: Implement update book
                 // - Validate book ownership
                 // - Call BookService.updateBook(bookId, updateData, userId)
                 // - Return updated book
-                res.status(501).json({ message: 'Update book not implemented yet', bookId: id, updateData });
             }
             catch (error) {
                 res.status(500).json({ error: 'Failed to update book' });

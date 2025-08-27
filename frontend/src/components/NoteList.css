@@ -39,6 +39,28 @@
   border-color: #e2e8f0;
 }
 
+.note-card.note-pending {
+  opacity: 0.7;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  cursor: default;
+}
+
+.note-card.note-pending:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.pending-indicator {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .note-header {
   display: flex;
   justify-content: space-between;

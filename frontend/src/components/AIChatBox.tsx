@@ -3,7 +3,7 @@ import { aiApi } from '../services/api';
 import './AIChatBox.css';
 
 // Types
-interface Message {
+export interface Message {
   id: string;
   type: 'user' | 'ai';
   content: string;
@@ -57,7 +57,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ bookId }) => {
       
       if (response.success && response.data) {
         const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: 'ai_message' + (Date.now() + 1).toString(),
           type: 'ai',
           content: response.data.response,
           timestamp: new Date(),
@@ -68,7 +68,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ bookId }) => {
       } else {
         // Handle API error
         const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: 'error_message' + (Date.now() + 1).toString(),
           type: 'ai',
           content: `Sorry, I encountered an error: ${response.error || 'Unknown error'}. Please try again.`,
           timestamp: new Date()
@@ -80,7 +80,7 @@ const AIChatBox: React.FC<AIChatBoxProps> = ({ bookId }) => {
       console.error('Failed to get AI response:', error);
       
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: 'error_message' + (Date.now() + 1).toString(),
         type: 'ai',
         content: 'Sorry, I encountered an error while processing your request. Please try again.',
         timestamp: new Date()

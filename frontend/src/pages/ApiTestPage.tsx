@@ -22,8 +22,9 @@ const ApiTestPage: React.FC = () => {
 
   const testGetBooks = async () => {
     setLoading('books');
+    const userId = '123';
     try {
-      const response = await bookApi.getAllBooks();
+      const response = await bookApi.getAllBooks(userId);
       if (response.success && response.data) {
         setBooks(response.data);
       } else {
@@ -39,6 +40,8 @@ const ApiTestPage: React.FC = () => {
   };
 
   const testCreateBook = async () => {
+    const userId = '123';
+
     setLoading('create');
     try {
       const response = await bookApi.createBook({
@@ -47,7 +50,7 @@ const ApiTestPage: React.FC = () => {
         pageCount: 200,
         genre: 'Test',
         tags: ['test', 'demo']
-      });
+      }, userId);
       
       if (response.success) {
         alert('Book created successfully! Check the books list.');

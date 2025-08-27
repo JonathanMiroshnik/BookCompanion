@@ -23,12 +23,9 @@ class AIController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const userId = req.user.id;
-                const { query, bookIds, includeGeneralKnowledge } = req.body;
-                // TODO: Implement AI query processing
-                // - Validate query parameters
-                // - Call AIService.processQuery(query, bookIds, userId)
-                // - Return RAG-generated response with sources
-                res.status(501).json({ message: 'AI query processing not implemented yet', query, bookIds });
+                const { query, bookId } = req.body;
+                const response = yield this.aiService.processQuery(query, bookId, userId);
+                res.status(200).json({ success: true, data: response });
             }
             catch (error) {
                 res.status(500).json({ error: 'Failed to process AI query' });
